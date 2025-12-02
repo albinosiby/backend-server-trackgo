@@ -16,7 +16,7 @@ cred_dict = json.loads(cred_json)
 cred = credentials.Certificate(cred_dict)
 
 firebase_admin.initialize_app(cred, {
-    "databaseURL": os.environ["https://bus-management-c8612-default-rtdb.firebaseio.com"]
+    "databaseURL": os.environ["FIREBASE_DB_URL"]
 })
 
 @app.route("/", methods=["GET", "POST"])
