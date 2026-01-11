@@ -62,6 +62,37 @@ def fetch_gps_data():
                 except Exception:
                     data = {"raw": response.text}
 
+                try:
+                    # Expected structure based on user snippet:
+                    # data['response']['response']['LiveData'] is a list of bus objects
+                    live_data = data.get("response", {}).get("response", {}).get("LiveData", [])
+                    
+                    if isinstance(live_data, list):
+                        for bus in live_data:
+                            reg_no = bus.get("Reg_No")
+                            if reg_no:
+                                lat = bus.get("Lat")
+                                lon = bus.get("Lon")
+                                speed = bus.get("Speed")
+                                
+                                # Update specific path as requested
+                                # Path: /organizations/obnpZfRSukYavktpNiea5Q6p4WB2/bus_location/<Reg_No>
+                                ref_path = f"/organizations/obnpZfRSukYavktpNiea5Q6p4WB2/bus_location/{reg_no}"
+                                
+                                db.reference(ref_path).update({
+                                    "lat": lat,
+                                    "lon": lon,
+                                    "speed": speed,
+                                    "last_updated": datetime.utcnow().isoformat()
+                                })
+                        print(f"Updated locations for {len(live_data)} buses")
+                    else:
+                        print("Invalid data structure: LiveData not found or not a list")
+
+                except Exception as update_error:
+                    print(f"Error updating bus locations: {update_error}")
+
+                # Optional: Still log raw data if needed, or remove as per 'rewrite' instruction
                 db.reference("/api_logs").push({
                     "timestamp": datetime.utcnow().isoformat(),
                     "status": response.status_code,
