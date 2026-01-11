@@ -36,47 +36,59 @@ API_BODY = {
     }
 }
 
-INTERVAL_SECONDS = 120
+INTERVAL_SECONDS = 121
 
 
 def fetch_gps_data():
+    ORG_ID = "obnpZfRSukYavktpNiea5Q6p4WB2"
+
     while True:
         try:
+            # 1️⃣ Read bus IDs from Firebase
+            bus_locations_ref = db.reference(f"/organizations/{ORG_ID}/bus_location")
+            bus_locations = bus_locations_ref.get() or {}
+
+            bus_ids = set(bus_locations.keys())
+            print("Firebase bus IDs:", bus_ids)
+
+            # 2️⃣ Call LiveTrace API
             response = requests.post(API_URL, json=API_BODY, timeout=30)
 
-            if response.status_code == 200:
-                data = response.json()
-
-                live_data = data.get("response", {}).get("response", {}).get("LiveData", [])
-
-                for bus in live_data:
-                    if bus.get("Reg_No") == "KL-59-L-3717":
-                        db.reference(
-                            "/organizations/obnpZfRSukYavktpNiea5Q6p4WB2/bus_location/KL-59-L-3717"
-                        ).update({
-                            "latitude": bus.get("Lat"),
-                            "longitude": bus.get("Lon"),
-                            "speed": bus.get("Speed"),
-                            "timestamp": int(time.time() * 1000)
-                        })
-
-                # keep api logs
-                db.reference("/api_logs").push({
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "status": response.status_code,
-                    "response": data
-                })
-
-                print("Bus location updated")
-
-            else:
+            if response.status_code != 200:
                 print("API error:", response.status_code)
+                time.sleep(INTERVAL_SECONDS)
+                continue
+
+            data = response.json()
+            live_data = data.get("response", {}).get("response", {}).get("LiveData", [])
+
+            # 3️⃣ Match Reg_No with Firebase bus IDs
+            for bus in live_data:
+                reg_no = bus.get("Reg_No")
+
+                if reg_no in bus_ids:
+                    db.reference(
+                        f"/organizations/{ORG_ID}/bus_location/{reg_no}"
+                    ).update({
+                        "latitude": bus.get("Lat"),
+                        "longitude": bus.get("Lon"),
+                        "speed": bus.get("Speed"),
+                        "timestamp": int(time.time() * 1000)
+                    })
+
+                    print(f"✅ Updated location for {reg_no}")
+
+            # 4️⃣ Optional: keep API logs
+            db.reference("/api_logs").push({
+                "timestamp": datetime.utcnow().isoformat(),
+                "status": response.status_code,
+                "response": data
+            })
 
         except Exception as e:
             print("Error:", e)
 
         time.sleep(INTERVAL_SECONDS)
-
 
 # ---------- START BACKGROUND THREAD ----------
 threading.Thread(target=fetch_gps_data, daemon=True).start()
