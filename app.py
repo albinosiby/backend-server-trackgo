@@ -80,11 +80,12 @@ def fetch_gps_data():
                                 ref_path = f"/organizations/obnpZfRSukYavktpNiea5Q6p4WB2/bus_location/{reg_no}"
                                 
                                 db.reference(ref_path).update({
-                                    "lat": lat,
-                                    "lon": lon,
+                                    "latitude": lat,
+                                    "longitude": lon,
                                     "speed": speed,
-                                    "last_updated": datetime.utcnow().isoformat()
+                                    "timestamp": int(time.time() * 1000)
                                 })
+
                         print(f"Updated locations for {len(live_data)} buses")
                     else:
                         print("Invalid data structure: LiveData not found or not a list")
