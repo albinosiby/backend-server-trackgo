@@ -30,11 +30,11 @@ API_BODY = {
         "Version": "1.0",
         "clientName": "API_LiveTrace"
     },
-    "request": {
-        "userid": "vjectest",
-        "key": "testkey"
+        "request": {
+            "userid": "vjectest",
+            "key": "testkey"
+        }
     }
-}
 
 # ---------- RATE-LIMIT PROTECTION ----------
 lock = threading.Lock()
@@ -51,81 +51,80 @@ def fetch_gps_data():
                 time.sleep(5)
                 continue
 
-            last_call_time = now
+                last_call_time = now
 
-        try:
-            response = requests.post(API_URL, json=API_BODY, timeout=30)
+            try:
+                response = requests.post(API_URL, json=API_BODY, timeout=30)
 
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                except Exception:
-                    data = {"raw": response.text}
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                    except Exception:
+                        data = {"raw": response.text}
 
-                try:
-                    # Expected structure based on user snippet:
-                    # data['response']['response']['LiveData'] is a list of bus objects
-                    live_data = data.get("response", {}).get("response", {}).get("LiveData", [])
-                    
-                    if isinstance(live_data, list):
-                        for bus in live_data:
-                            reg_no = bus.get("Reg_No")
-                            if reg_no:
-                                lat = bus.get("Lat")
-                                lon = bus.get("Lon")
-                                speed = bus.get("Speed")
-                                
-                                # Update specific path as requested
-                                # Path: /organizations/obnpZfRSukYavktpNiea5Q6p4WB2/bus_location/<Reg_No>
-                                ref_path = f"/organizations/obnpZfRSukYavktpNiea5Q6p4WB2/bus_location/{reg_no}"
-                                
-                                db.reference(ref_path).update({
-                                    "latitude": lat,
-                                    "longitude": lon,
-                                    "speed": speed,
-                                    "timestamp": int(time.time() * 1000)
-                                })
-
-                        print(f"Updated locations for {len(live_data)} buses")
-                    else:
-                        print("Invalid data structure: LiveData not found or not a list")
-
-                except Exception as update_error:
-                    print(f"Error updating bus locations: {update_error}")
-
-                # Optional: Still log raw data if needed, or remove as per 'rewrite' instruction
-                db.reference("/api_logs").push({
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "status": response.status_code,
-                    "response": data
-                })
-
-                print("GPS data stored")
-
-            else:
-                print("API error:", response.status_code, response.text)
-
-        except Exception as e:
-            print("LiveTrace API call failed:", e)
-
-        time.sleep(INTERVAL_SECONDS)
+                    try:
+                        # Expected structure based on user snippet:
+                        # data['response']['response']['LiveData'] is a list of bus objects
+                        live_data = data.get("response", {}).get("response", {}).get("LiveData", [])
+                        
+                        if isinstance(live_data, list):
+                            for bus in live_data:
+                                reg_no = bus.get("Reg_No")
+                                if reg_no:
+                                    lat = bus.get("Lat")
+                                    lon = bus.get("Lon")
+                                    speed = bus.get("Speed")
+                                    
+                                    db.reference(
+                                        "/organizations/obnpZfRSukYavktpNiea5Q6p4WB2/bus_location/KL-59-L-3717"
+                                    ).update({
+                                        "latitude": lat,
+                                        "longitude": lon,
+                                        "speed": speed,
+                                        "timestamp": int(time.time() * 1000)
+                                    })
 
 
-# ---------- START BACKGROUND THREAD (ONCE) ----------
-def start_background_task():
-    t = threading.Thread(target=fetch_gps_data, daemon=True)
-    t.start()
+                            print(f"Updated locations for {len(live_data)} buses")
+                        else:
+                            print("Invalid data structure: LiveData not found or not a list")
 
-start_background_task()
+                    except Exception as update_error:
+                        print(f"Error updating bus locations: {update_error}")
 
-@app.route("/")
-def home():
-    return "LiveTrace API polling service running"
+                    # Optional: Still log raw data if needed, or remove as per 'rewrite' instruction
+                    db.reference("/api_logs").push({
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "status": response.status_code,
+                        "response": data
+                    })
 
-@app.route("/test")
-def test():
-    return "Server OK"
+                    print("GPS data stored")
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+                else:
+                    print("API error:", response.status_code, response.text)
+
+            except Exception as e:
+                print("LiveTrace API call failed:", e)
+
+            time.sleep(INTERVAL_SECONDS)
+
+
+    # ---------- START BACKGROUND THREAD (ONCE) ----------
+    def start_background_task():
+        t = threading.Thread(target=fetch_gps_data, daemon=True)
+        t.start()
+
+    start_background_task()
+
+    @app.route("/")
+    def home():
+        return "LiveTrace API polling service running"
+
+    @app.route("/test")
+    def test():
+        return "Server OK"
+
+    if __name__ == "__main__":
+        port = int(os.environ.get("PORT", 5000))
+        app.run(host="0.0.0.0", port=port)
