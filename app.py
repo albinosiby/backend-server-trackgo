@@ -64,7 +64,7 @@ def fetch_gps_data():
 
             # 3️⃣ Match Reg_No with Firebase bus IDs
             for bus in live_data:
-                reg_no = bus.get("Reg_No")
+                reg_no = bus.get("KL-59-L-3717")
 
                 if reg_no in bus_ids:
                     db.reference(
