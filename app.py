@@ -39,7 +39,7 @@ API_BODY = {
     }
 }
 
-INTERVAL_SECONDS = 121
+INTERVAL_SECONDS = 60
 
 
 def fetch_gps_data():
