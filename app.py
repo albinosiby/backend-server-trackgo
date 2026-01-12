@@ -12,8 +12,11 @@ app = Flask(__name__)
 
 # ---------- FIREBASE SETUP ----------
 cred_json = os.environ.get("FIREBASE_SERVICE_KEY")
-if not cred_json:
-    raise Exception("FIREBASE_SERVICE_KEY not set")
+if not cred_json and os.path.exists("serviceAccountKey.json"):
+    with open("serviceAccountKey.json", "r") as f:
+        cred_json = f.read()
+# if not cred_json:
+#     raise Exception("FIREBASE_SERVICE_KEY not set")
 
 cred_dict = json.loads(cred_json)
 cred = credentials.Certificate(cred_dict)
@@ -61,11 +64,16 @@ def fetch_gps_data():
                 continue
 
             data = response.json()
-            live_data = data.get("response", {}).get("response", {}).get("LiveData", [])
+            # The structure is data["response"]["LiveData"]
+            live_data = data.get("response", {}).get("LiveData", [])
 
             # 3️⃣ Update bus locations
             for bus in live_data:
                 reg_no = bus.get("Reg_No")
+                if not reg_no:
+                    continue
+                
+                reg_no = reg_no.strip()
 
                 if reg_no in bus_ids:
                     try:
@@ -112,3 +120,8 @@ def home():
 @app.route("/test")
 def test():
     return "Server OK"
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
