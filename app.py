@@ -68,13 +68,21 @@ def fetch_gps_data():
                 reg_no = bus.get("Reg_No")
 
                 if reg_no in bus_ids:
+                    try:
+                        # Parse time string "2026-01-12 10:02:31"
+                        time_str = bus.get("Time")
+                        dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+                        ts = int(dt.timestamp() * 1000)
+                    except Exception:
+                        ts = int(time.time() * 1000)
+
                     db.reference(
                         f"/organizations/{ORG_ID}/bus_location/{reg_no}"
                     ).update({
                         "latitude": bus.get("Lat"),
                         "longitude": bus.get("Lon"),
                         "speed": bus.get("Speed"),
-                        "timestamp": int(time.time() * 1000)
+                        "timestamp": ts
                     })
 
                     print(f"✅ Updated location for {reg_no}")
