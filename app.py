@@ -45,8 +45,9 @@ def fetch_gps_data():
     while True:
         try:
             # 1️⃣ Read bus IDs from Firebase
-            bus_locations_ref = db.reference(f"/organizations/{ORG_ID}/bus_location")
-            bus_locations = bus_locations_ref.get() or {}
+            bus_locations = db.reference(
+                f"/organizations/{ORG_ID}/bus_location"
+            ).get() or {}
 
             bus_ids = set(bus_locations.keys())
             print("Firebase bus IDs:", bus_ids)
@@ -62,9 +63,9 @@ def fetch_gps_data():
             data = response.json()
             live_data = data.get("response", {}).get("response", {}).get("LiveData", [])
 
-            # 3️⃣ Match Reg_No with Firebase bus IDs
+            # 3️⃣ Update bus locations
             for bus in live_data:
-                reg_no = bus.get("KL-59-L-3717")
+                reg_no = bus.get("Reg_No")
 
                 if reg_no in bus_ids:
                     db.reference(
@@ -78,8 +79,8 @@ def fetch_gps_data():
 
                     print(f"✅ Updated location for {reg_no}")
 
-            # 4️⃣ Optional: keep API logs
-            db.reference("/api_logs").push({
+            # 4️⃣ Rewrite single API log
+            db.reference("/api_logs/latest").set({
                 "timestamp": datetime.utcnow().isoformat(),
                 "status": response.status_code,
                 "response": data
