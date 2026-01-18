@@ -22,7 +22,8 @@ cred_dict = json.loads(cred_json)
 cred = credentials.Certificate(cred_dict)
 
 firebase_admin.initialize_app(cred, {
-  #  "databaseURL": "https://bus-management-c8612-default-rtdb.firebaseio.com"
+  
+    "databaseURL": "https://bus-management-c8612-default-rtdb.firebaseio.com"
 })
 
 # ---------- LIVETRACE API ----------
